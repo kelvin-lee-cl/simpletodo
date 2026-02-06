@@ -101,8 +101,11 @@ class TodoApp {
                 this.tasks.push(task);
             });
 
-            // Sort by creation time (newest first)
+            // Sort by order (then by creation time for tasks without order)
             this.tasks.sort((a, b) => {
+                const aOrder = typeof a.order === 'number' ? a.order : 999999;
+                const bOrder = typeof b.order === 'number' ? b.order : 999999;
+                if (aOrder !== bOrder) return aOrder - bOrder;
                 const aTime = a.createdAt?.toMillis?.() || a.createdAt?.getTime?.() || new Date(a.createdAt)?.getTime() || 0;
                 const bTime = b.createdAt?.toMillis?.() || b.createdAt?.getTime?.() || new Date(b.createdAt)?.getTime() || 0;
                 return bTime - aTime;
@@ -162,6 +165,33 @@ class TodoApp {
         const today = new Date().toISOString().split('T')[0];
         dateInput.value = today;
         dateInput.min = today;
+
+        this.fillTimeSelects();
+        this.loadAddTaskSectionState();
+    }
+
+    fillTimeSelects() {
+        const hourSelect = document.getElementById('deadlineTimeHour');
+        const minSelect = document.getElementById('deadlineTimeMin');
+        if (!hourSelect || !minSelect) return;
+        hourSelect.innerHTML = '';
+        for (let h = 0; h < 24; h++) {
+            const opt = document.createElement('option');
+            opt.value = String(h).padStart(2, '0');
+            opt.textContent = String(h).padStart(2, '0');
+            hourSelect.appendChild(opt);
+        }
+        minSelect.innerHTML = '';
+        ['00', '15', '30', '45'].forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            minSelect.appendChild(opt);
+        });
+        const now = new Date();
+        hourSelect.value = String(now.getHours()).padStart(2, '0');
+        const min = now.getMinutes();
+        minSelect.value = ['00', '15', '30', '45'][Math.min(3, Math.floor(min / 15))];
     }
 
     async addTask() {
@@ -172,24 +202,28 @@ class TodoApp {
 
         const taskInput = document.getElementById('taskInput');
         const deadlineDate = document.getElementById('deadlineDate');
-        const deadlineTime = document.getElementById('deadlineTime');
+        const deadlineTimeHour = document.getElementById('deadlineTimeHour');
+        const deadlineTimeMin = document.getElementById('deadlineTimeMin');
 
         try {
             const { Timestamp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
+            const timeStr = `${deadlineTimeHour.value}:${deadlineTimeMin.value}`;
+            const maxOrder = this.tasks.length === 0 ? 0 : Math.max(...this.tasks.map(t => typeof t.order === 'number' ? t.order : 0), -1) + 1;
             const taskData = {
                 description: taskInput.value.trim(),
-                deadline: `${deadlineDate.value}T${deadlineTime.value}`,
+                deadline: `${deadlineDate.value}T${timeStr}`,
                 completed: false,
                 elapsedTime: 0,
                 isTracking: false,
+                order: maxOrder,
                 createdAt: Timestamp.now()
             };
 
             await this.addDoc(this.tasksCollectionRef, taskData);
             // Reset form
             taskInput.value = '';
-            deadlineTime.value = '';
+            this.fillTimeSelects();
         } catch (error) {
             console.error('Error adding task:', error);
             alert('Failed to add task. Please try again.');
@@ -246,6 +280,149 @@ class TodoApp {
                 alert('Failed to update task. Please try again.');
             }
         }
+    }
+
+    async updateTaskDescription(id, newDescription) {
+        const taskId = String(id);
+        const trimmed = (newDescription || '').trim();
+        if (!trimmed) return;
+        if (!this.isInitialized) return;
+        try {
+            const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            await this.updateDoc(taskDocRef, { description: trimmed });
+        } catch (error) {
+            console.error('Error updating task description:', error);
+            alert('Failed to update task. Please try again.');
+        }
+    }
+
+    async updateTaskDeadline(id, newDeadline) {
+        const taskId = String(id);
+        if (!newDeadline || !this.isInitialized) return;
+        try {
+            const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            await this.updateDoc(taskDocRef, { deadline: newDeadline });
+        } catch (error) {
+            console.error('Error updating task deadline:', error);
+            alert('Failed to update deadline. Please try again.');
+        }
+    }
+
+    roundMinutesToQuarter(min) {
+        const m = Number(min);
+        if (m <= 7) return '00';
+        if (m <= 22) return '15';
+        if (m <= 37) return '30';
+        return '45';
+    }
+
+    startEditDeadline(taskId) {
+        const task = this.tasks.find(t => String(t.id) === String(taskId));
+        if (!task || !task.deadline) return;
+        const taskItem = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
+        if (!taskItem) return;
+        const deadlineEl = taskItem.querySelector('.task-deadline');
+        if (!deadlineEl || deadlineEl.querySelector('.deadline-editor')) return;
+
+        const parsed = task.deadline.match(/^(\d{4}-\d{2}-\d{2})T(\d{1,2}):(\d{2})/);
+        const dateVal = parsed ? parsed[1] : new Date().toISOString().split('T')[0];
+        let hour = parsed ? String(parseInt(parsed[2], 10)).padStart(2, '0') : '12';
+        let min = parsed ? this.roundMinutesToQuarter(parsed[3]) : '00';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'deadline-editor';
+        const dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.value = dateVal;
+        dateInput.className = 'deadline-date-input';
+        const hourSelect = document.createElement('select');
+        hourSelect.className = 'deadline-time-hour';
+        for (let h = 0; h < 24; h++) {
+            const o = document.createElement('option');
+            o.value = String(h).padStart(2, '0');
+            o.textContent = o.value;
+            if (o.value === hour) o.selected = true;
+            hourSelect.appendChild(o);
+        }
+        const minSelect = document.createElement('select');
+        minSelect.className = 'deadline-time-min';
+        ['00', '15', '30', '45'].forEach(m => {
+            const o = document.createElement('option');
+            o.value = m;
+            o.textContent = m;
+            if (m === min) o.selected = true;
+            minSelect.appendChild(o);
+        });
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn-deadline-save';
+        saveBtn.textContent = 'Save';
+
+        wrap.appendChild(dateInput);
+        wrap.appendChild(hourSelect);
+        wrap.appendChild(document.createTextNode(':'));
+        wrap.appendChild(minSelect);
+        wrap.appendChild(saveBtn);
+
+        const finish = (save) => {
+            if (save) {
+                const h = hourSelect.value;
+                const m = minSelect.value;
+                const newDeadline = `${dateInput.value}T${h}:${m}`;
+                this.updateTaskDeadline(taskId, newDeadline).then(() => this.renderTasks());
+            } else {
+                this.renderTasks();
+            }
+        };
+
+        saveBtn.addEventListener('click', () => finish(true));
+        dateInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } });
+        hourSelect.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } });
+        minSelect.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } });
+
+        deadlineEl.textContent = '';
+        deadlineEl.appendChild(wrap);
+        dateInput.focus();
+    }
+
+    startEditDescription(taskId) {
+        const taskItem = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
+        if (!taskItem) return;
+        const descEl = taskItem.querySelector('.task-description');
+        if (!descEl || descEl.querySelector('input')) return;
+        const current = (descEl.textContent || '').trim();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'task-description-input';
+        input.value = current;
+        input.setAttribute('data-task-id', taskId);
+        const finish = () => {
+            const value = input.value.trim();
+            input.remove();
+            descEl.textContent = value || current;
+            descEl.style.display = '';
+            if (value && value !== current) {
+                this.updateTaskDescription(taskId, value).then(() => this.renderTasks());
+            } else {
+                descEl.textContent = current;
+            }
+        };
+        input.addEventListener('blur', finish);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            }
+            if (e.key === 'Escape') {
+                input.value = current;
+                input.blur();
+            }
+        });
+        descEl.textContent = '';
+        descEl.style.display = 'block';
+        descEl.appendChild(input);
+        input.focus();
+        input.select();
     }
 
     async toggleTracking(id) {
@@ -449,9 +626,9 @@ class TodoApp {
             const description = this.escapeHtml(task.description);
 
             return `
-                <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" draggable="true">
                     <div class="task-content-wrapper">
-                        <div class="task-description">${description}</div>
+                        <div class="task-description" data-task-id="${task.id}" title="Click to edit">${description}</div>
                         <div class="task-timer">
                             <span class="timer-display">${timerDisplay}</span>
                             <button class="btn-play ${task.isTracking ? 'playing' : ''}" 
@@ -460,9 +637,7 @@ class TodoApp {
                                     type="button">
                                 ${task.isTracking ? '⏸️' : '▶️'}
                             </button>
-                            <span class="task-deadline ${deadline.isOverdue ? 'overdue' : ''}">
-                                ${this.escapeHtml(deadline.formatted)}
-                            </span>
+                            <span class="task-deadline ${deadline.isOverdue ? 'overdue' : ''}" data-task-id="${task.id}" title="Click to edit">${this.escapeHtml(deadline.formatted)}</span>
                         </div>
                     </div>
                     <button class="btn-complete ${task.completed ? 'completed' : ''}" 
@@ -484,6 +659,84 @@ class TodoApp {
 
         // Set up event delegation for buttons (backup method)
         this.setupButtonEventListeners();
+        this.setupDragAndDrop();
+    }
+
+    setupDragAndDrop() {
+        const taskList = document.getElementById('taskList');
+        if (!taskList) return;
+
+        if (this.dragStartBound) {
+            taskList.removeEventListener('dragstart', this.dragStartBound);
+            taskList.removeEventListener('dragover', this.dragOverBound);
+            taskList.removeEventListener('drop', this.dropBound);
+            taskList.removeEventListener('dragleave', this.dragLeaveBound);
+            taskList.removeEventListener('dragend', this.dragEndBound);
+        }
+
+        this.dragStartBound = (e) => {
+            const item = e.target.closest('.task-item');
+            if (!item) return;
+            const taskId = item.getAttribute('data-task-id');
+            if (!taskId) return;
+            e.dataTransfer.setData('text/plain', taskId);
+            e.dataTransfer.effectAllowed = 'move';
+            item.classList.add('dragging');
+        };
+
+        this.dragOverBound = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const item = e.target.closest('.task-item');
+            if (item && !item.classList.contains('dragging')) {
+                item.classList.add('drag-over');
+            }
+        };
+
+        this.dragLeaveBound = (e) => {
+            const item = e.target.closest('.task-item');
+            if (item) item.classList.remove('drag-over');
+        };
+
+        this.dragEndBound = (e) => {
+            const item = e.target.closest('.task-item');
+            if (item) item.classList.remove('dragging');
+            taskList.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over'));
+        };
+
+        this.dropBound = (e) => {
+            e.preventDefault();
+            const targetItem = e.target.closest('.task-item');
+            if (!targetItem) return;
+            targetItem.classList.remove('drag-over');
+            const draggedId = e.dataTransfer.getData('text/plain');
+            const targetId = targetItem.getAttribute('data-task-id');
+            if (!draggedId || !targetId || draggedId === targetId) return;
+            this.reorderTasks(draggedId, targetId);
+        };
+
+        taskList.addEventListener('dragstart', this.dragStartBound);
+        taskList.addEventListener('dragover', this.dragOverBound);
+        taskList.addEventListener('dragleave', this.dragLeaveBound);
+        taskList.addEventListener('dragend', this.dragEndBound);
+        taskList.addEventListener('drop', this.dropBound);
+    }
+
+    async reorderTasks(draggedId, targetId) {
+        const fromIndex = this.tasks.findIndex(t => String(t.id) === String(draggedId));
+        const toIndex = this.tasks.findIndex(t => String(t.id) === String(targetId));
+        if (fromIndex === -1 || toIndex === -1) return;
+        const [moved] = this.tasks.splice(fromIndex, 1);
+        this.tasks.splice(toIndex, 0, moved);
+        const updates = this.tasks.map((task, index) => ({ id: task.id, order: index }));
+        try {
+            for (const { id, order } of updates) {
+                const taskDocRef = this.doc(this.db, 'tasks', id);
+                await this.updateDoc(taskDocRef, { order });
+            }
+        } catch (error) {
+            console.error('Error reordering tasks:', error);
+        }
     }
 
     setupButtonEventListeners() {
@@ -501,6 +754,9 @@ class TodoApp {
             const button = e.target.closest('button');
             if (!button) return;
 
+            // Don't intercept the deadline editor Save button - let it handle its own click
+            if (button.classList.contains('btn-deadline-save')) return;
+
             const taskItem = button.closest('.task-item');
             if (!taskItem) return;
 
@@ -510,7 +766,7 @@ class TodoApp {
                 return;
             }
 
-            // Prevent default and stop propagation
+            // Prevent default and stop propagation only for task action buttons
             e.preventDefault();
             e.stopPropagation();
 
@@ -527,6 +783,51 @@ class TodoApp {
         };
 
         taskList.addEventListener('click', this.handleButtonClickBound, true);
+
+        if (this.handleDescriptionClickBound) {
+            taskList.removeEventListener('click', this.handleDescriptionClickBound, true);
+        }
+        if (this.handleDeadlineClickBound) {
+            taskList.removeEventListener('click', this.handleDeadlineClickBound, true);
+        }
+        this.handleDescriptionClickBound = (e) => {
+            const desc = e.target.closest('.task-description');
+            if (!desc || desc.querySelector('input')) return;
+            const taskId = desc.getAttribute('data-task-id');
+            if (taskId) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.startEditDescription(taskId);
+            }
+        };
+        taskList.addEventListener('click', this.handleDescriptionClickBound, true);
+
+        this.handleDeadlineClickBound = (e) => {
+            const deadlineEl = e.target.closest('.task-deadline');
+            if (!deadlineEl || deadlineEl.querySelector('.deadline-editor')) return;
+            const taskId = deadlineEl.getAttribute('data-task-id');
+            if (taskId) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.startEditDeadline(taskId);
+            }
+        };
+        taskList.addEventListener('click', this.handleDeadlineClickBound, true);
+    }
+
+    toggleAddTaskSection() {
+        const section = document.querySelector('.add-task-collapsible');
+        if (!section) return;
+        section.classList.toggle('collapsed');
+        const collapsed = section.classList.contains('collapsed');
+        localStorage.setItem('addTaskCollapsed', collapsed ? '1' : '0');
+    }
+
+    loadAddTaskSectionState() {
+        if (localStorage.getItem('addTaskCollapsed') === '1') {
+            const section = document.querySelector('.add-task-collapsible');
+            if (section) section.classList.add('collapsed');
+        }
     }
 
     startTimerUpdate() {
@@ -593,7 +894,7 @@ class TodoApp {
     }
 
     toggleSection(sectionId) {
-        const section = document.querySelector(`.${sectionId === 'dashboard' ? 'dashboard' : sectionId === 'add-task' ? 'add-task-section' : 'tasks-section'}`);
+        const section = document.querySelector(`.${sectionId === 'dashboard' ? 'dashboard' : 'tasks-section'}`);
         const icon = document.getElementById(`${sectionId}-icon`);
 
         if (section) {
@@ -610,9 +911,9 @@ class TodoApp {
     loadSectionStates() {
         const states = JSON.parse(localStorage.getItem('sectionStates')) || {};
 
-        ['dashboard', 'add-task', 'tasks'].forEach(sectionId => {
+        ['dashboard', 'tasks'].forEach(sectionId => {
             if (states[sectionId]) {
-                const section = document.querySelector(`.${sectionId === 'dashboard' ? 'dashboard' : sectionId === 'add-task' ? 'add-task-section' : 'tasks-section'}`);
+                const section = document.querySelector(`.${sectionId === 'dashboard' ? 'dashboard' : 'tasks-section'}`);
                 if (section) {
                     section.classList.add('collapsed');
                 }

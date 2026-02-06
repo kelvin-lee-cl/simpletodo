@@ -58,34 +58,7 @@
             </div>
         </div>
 
-        <!-- Add Task Form -->
-        <div class="add-task-section collapsible-section">
-            <div class="section-header" onclick="app.toggleSection('add-task')">
-                <h2>Add New Task</h2>
-                <span class="collapse-icon" id="add-task-icon">▼</span>
-            </div>
-            <div class="section-content" id="add-task-content">
-                <form id="taskForm">
-                    <div class="form-group">
-                        <label for="taskInput">Task Description</label>
-                        <input type="text" id="taskInput" placeholder="Enter task description..." required>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="deadlineDate">Deadline Date</label>
-                            <input type="date" id="deadlineDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="deadlineTime">Deadline Time</label>
-                            <input type="time" id="deadlineTime" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Task</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Task List -->
+        <!-- Task List (with Add New Task underneath the Tasks tab) -->
         <div class="tasks-section collapsible-section">
             <div class="section-header" onclick="app.toggleSection('tasks')">
                 <h2>Tasks</h2>
@@ -95,6 +68,36 @@
                 <div id="taskList" class="task-list">
                     <!-- Tasks will be dynamically added here -->
                 </div>
+                <div class="add-task-collapsible collapsible-section">
+                    <div class="section-header add-task-header" onclick="app.toggleAddTaskSection()">
+                        <h3 class="add-task-heading">Add New Task</h3>
+                        <span class="collapse-icon" id="add-task-icon">▼</span>
+                    </div>
+                    <div class="section-content" id="add-task-content">
+                        <form id="taskForm">
+                            <div class="form-group">
+                                <label for="taskInput">Task Description</label>
+                                <input type="text" id="taskInput" placeholder="Enter task description..." required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="deadlineDate">Deadline Date</label>
+                                    <input type="date" id="deadlineDate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="deadlineTimeHour">Deadline Time</label>
+                                    <div class="time-selects">
+                                        <select id="deadlineTimeHour" required></select>
+                                        <span class="time-sep">:</span>
+                                        <select id="deadlineTimeMin" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add Task</button>
+                        </form>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

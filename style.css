@@ -242,6 +242,63 @@ header h1 {
     padding-top: 10px;
 }
 
+.add-task-collapsible {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.add-task-collapsible .section-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 500px;
+    opacity: 1;
+}
+
+.add-task-collapsible.collapsed .section-content {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+}
+
+.add-task-collapsible .section-header.add-task-header {
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+.add-task-collapsible.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.add-task-heading {
+    font-size: 1rem;
+    color: #333;
+    margin: 0;
+    font-weight: 600;
+}
+
+.time-selects {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.time-selects select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: #fff;
+    min-width: 60px;
+}
+
+.time-sep {
+    font-weight: 600;
+    color: #333;
+}
+
 .task-list {
     display: flex;
     flex-direction: column;
@@ -261,11 +318,24 @@ header h1 {
     flex-wrap: nowrap;
     overflow: visible;
     flex-direction: row;
+    cursor: grab;
+}
+
+.task-item:active {
+    cursor: grabbing;
 }
 
 .task-item:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: #f5f5f5;
+}
+
+.task-item.dragging {
+    opacity: 0.5;
+}
+
+.task-item.drag-over {
+    border-top: 2px solid #4a90e2;
 }
 
 .task-item.completed {
@@ -294,6 +364,23 @@ header h1 {
     text-overflow: ellipsis;
     min-width: 0;
     margin-bottom: 2px;
+    cursor: pointer;
+}
+
+.task-description:hover {
+    color: #4a90e2;
+}
+
+.task-description-input {
+    width: 100%;
+    font-size: 0.85rem;
+    color: #333;
+    padding: 4px 6px;
+    border: 1px solid #4a90e2;
+    border-radius: 4px;
+    outline: none;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .task-timer {
@@ -315,6 +402,44 @@ header h1 {
 .task-deadline.overdue {
     color: #e74c3c;
     font-weight: 600;
+}
+
+.task-deadline {
+    cursor: pointer;
+}
+
+.task-deadline:hover {
+    text-decoration: underline;
+}
+
+.deadline-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.deadline-date-input,
+.deadline-time-hour,
+.deadline-time-min {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border: 1px solid #4a90e2;
+    border-radius: 4px;
+}
+
+.btn-deadline-save {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    background: #4a90e2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-deadline-save:hover {
+    background: #357abd;
 }
 
 .timer-display {
