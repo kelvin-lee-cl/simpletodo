@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List - Focus Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Todo List</h1>
+        </header>
+
+        <!-- Dashboard -->
+        <div class="dashboard collapsible-section">
+            <div class="section-header" onclick="app.toggleSection('dashboard')">
+                <h2>Dashboard</h2>
+                <span class="collapse-icon" id="dashboard-icon">▼</span>
+            </div>
+            <div class="section-content" id="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total Focus Time</div>
+                            <div class="stat-value" id="totalFocusTime">00:00:00</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Completed Tasks</div>
+                            <div class="stat-value" id="completedTasks">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Outstanding Tasks</div>
+                            <div class="stat-value" id="outstandingTasks">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">😴</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Idling Time</div>
+                            <div class="stat-value" id="idlingTime">00:00:00</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-actions">
+                    <button type="button" class="btn-reset-times" onclick="app.resetTimes()">Reset Focus & Idling
+                        Time</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Form -->
+        <div class="add-task-section collapsible-section">
+            <div class="section-header" onclick="app.toggleSection('add-task')">
+                <h2>Add New Task</h2>
+                <span class="collapse-icon" id="add-task-icon">▼</span>
+            </div>
+            <div class="section-content" id="add-task-content">
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label for="taskInput">Task Description</label>
+                        <input type="text" id="taskInput" placeholder="Enter task description..." required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="deadlineDate">Deadline Date</label>
+                            <input type="date" id="deadlineDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="deadlineTime">Deadline Time</label>
+                            <input type="time" id="deadlineTime" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Task</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="tasks-section collapsible-section">
+            <div class="section-header" onclick="app.toggleSection('tasks')">
+                <h2>Tasks</h2>
+                <span class="collapse-icon" id="tasks-icon">▼</span>
+            </div>
+            <div class="section-content" id="tasks-content">
+                <div id="taskList" class="task-list">
+                    <!-- Tasks will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwo-oly7ZSt5Z_4AbCcuIvq8yqEK31hzw",
+            authDomain: "simpledolist.firebaseapp.com",
+            projectId: "simpledolist",
+            storageBucket: "simpledolist.firebasestorage.app",
+            messagingSenderId: "487829472007",
+            appId: "1:487829472007:web:3afd1cae84736f71fe3ba2",
+            measurementId: "G-C5Q00G5F5E"
+        };
+
+        // Initialize Firebase
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.db = getFirestore(window.firebaseApp);
+    </script>
+    <script src="script.js"></script>
+</body>
+
+</html>
