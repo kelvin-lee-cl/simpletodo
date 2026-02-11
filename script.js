@@ -19,14 +19,29 @@ class TodoApp {
 
     async initFirebase() {
         // Wait for Firebase to be available
-        while (!window.db) {
+        let retries = 0;
+        const maxRetries = 50; // 5 seconds max wait
+        while (!window.db && retries < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+
+        if (!window.db) {
+            console.error('Firebase database not initialized after timeout');
+            alert('Failed to connect to database. Please refresh the page.');
+            return;
         }
 
         // Import Firestore functions
         const { collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
         this.db = window.db;
+        if (!this.db) {
+            console.error('Firebase database instance is null');
+            alert('Database connection failed. Please check your Firebase configuration.');
+            return;
+        }
+
         this.collection = collection;
         this.doc = doc;
         this.getDoc = getDoc;
@@ -41,6 +56,12 @@ class TodoApp {
         // Set up Firestore references
         this.statsDocRef = doc(this.db, 'stats', 'userStats');
         this.tasksCollectionRef = collection(this.db, 'tasks');
+
+        if (!this.statsDocRef || !this.tasksCollectionRef) {
+            console.error('Failed to create Firestore references');
+            alert('Failed to initialize database references. Please check your Firebase configuration.');
+            return;
+        }
 
         // Load initial data
         await this.loadStats();
@@ -247,10 +268,13 @@ class TodoApp {
 
         try {
             const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            if (!taskDocRef) {
+                throw new Error('Task document reference is null');
+            }
             await this.deleteDoc(taskDocRef);
         } catch (error) {
             console.error('Error deleting task:', error);
-            alert('Failed to delete task. Please try again.');
+            alert(`Failed to delete task: ${error.message || error}`);
         }
     }
 
@@ -272,12 +296,15 @@ class TodoApp {
 
             try {
                 const taskDocRef = this.doc(this.db, 'tasks', taskId);
+                if (!taskDocRef) {
+                    throw new Error('Task document reference is null');
+                }
                 await this.updateDoc(taskDocRef, {
                     completed: !task.completed
                 });
             } catch (error) {
                 console.error('Error updating task:', error);
-                alert('Failed to update task. Please try again.');
+                alert(`Failed to update task: ${error.message || error}`);
             }
         }
     }
@@ -289,10 +316,13 @@ class TodoApp {
         if (!this.isInitialized) return;
         try {
             const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            if (!taskDocRef) {
+                throw new Error('Task document reference is null');
+            }
             await this.updateDoc(taskDocRef, { description: trimmed });
         } catch (error) {
             console.error('Error updating task description:', error);
-            alert('Failed to update task. Please try again.');
+            alert(`Failed to update task: ${error.message || error}`);
         }
     }
 
@@ -301,10 +331,13 @@ class TodoApp {
         if (!newDeadline || !this.isInitialized) return;
         try {
             const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            if (!taskDocRef) {
+                throw new Error('Task document reference is null');
+            }
             await this.updateDoc(taskDocRef, { deadline: newDeadline });
         } catch (error) {
             console.error('Error updating task deadline:', error);
-            alert('Failed to update deadline. Please try again.');
+            alert(`Failed to update deadline: ${error.message || error}`);
         }
     }
 
@@ -474,12 +507,19 @@ class TodoApp {
 
         try {
             const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            if (!taskDocRef) {
+                throw new Error('Task document reference is null');
+            }
             await this.updateDoc(taskDocRef, {
                 isTracking: true,
                 trackingStartTime: this.trackingStartTime // Store as number for easier calculation
             });
         } catch (error) {
             console.error('Error starting tracking:', error);
+            alert(`Failed to start tracking: ${error.message || error}`);
+            // Revert local state on error
+            this.currentTrackingTaskId = null;
+            this.trackingStartTime = null;
         }
     }
 
@@ -505,6 +545,9 @@ class TodoApp {
         try {
             // Update task
             const taskDocRef = this.doc(this.db, 'tasks', taskId);
+            if (!taskDocRef) {
+                throw new Error('Task document reference is null');
+            }
             await this.updateDoc(taskDocRef, {
                 isTracking: false,
                 elapsedTime: newElapsedTime,
@@ -512,6 +555,9 @@ class TodoApp {
             });
 
             // Update stats
+            if (!this.statsDocRef) {
+                throw new Error('Stats document reference is null');
+            }
             await this.updateDoc(this.statsDocRef, {
                 totalFocusTime: newTotalFocusTime
             });
@@ -519,6 +565,10 @@ class TodoApp {
             this.totalFocusTime = newTotalFocusTime;
         } catch (error) {
             console.error('Error stopping tracking:', error);
+            alert(`Failed to update database: ${error.message || error}`);
+            // Revert local state on error
+            this.currentTrackingTaskId = taskId;
+            this.trackingStartTime = trackingStart;
         }
     }
 
@@ -732,10 +782,15 @@ class TodoApp {
         try {
             for (const { id, order } of updates) {
                 const taskDocRef = this.doc(this.db, 'tasks', id);
+                if (!taskDocRef) {
+                    console.warn(`Task document reference is null for task ${id}`);
+                    continue;
+                }
                 await this.updateDoc(taskDocRef, { order });
             }
         } catch (error) {
             console.error('Error reordering tasks:', error);
+            alert(`Failed to reorder tasks: ${error.message || error}`);
         }
     }
 
@@ -863,6 +918,9 @@ class TodoApp {
         if (!this.isInitialized) return;
 
         try {
+            if (!this.statsDocRef) {
+                throw new Error('Stats document reference is null');
+            }
             await this.updateDoc(this.statsDocRef, {
                 totalIdlingTime: this.totalIdlingTime
             });
@@ -880,12 +938,16 @@ class TodoApp {
 
         if (this.isInitialized) {
             try {
+                if (!this.statsDocRef) {
+                    throw new Error('Stats document reference is null');
+                }
                 await this.updateDoc(this.statsDocRef, {
                     totalFocusTime: 0,
                     totalIdlingTime: 0
                 });
             } catch (error) {
                 console.error('Error resetting times:', error);
+                alert(`Failed to reset times: ${error.message || error}`);
             }
             localStorage.setItem('totalFocusTime', '0');
             localStorage.setItem('totalIdlingTime', '0');
