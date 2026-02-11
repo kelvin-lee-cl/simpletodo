@@ -1,0 +1,24 @@
+# Netlify configuration file
+
+[build]
+  # Build command to generate config.js from environment variables
+  command = "node build.js"
+  # Publish directory (current directory for static site)
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Note: Set these environment variables in Netlify dashboard:
+# Site settings > Environment variables > Add variable
+# 
+# Required variables:
+# - VITE_FIREBASE_API_KEY (or FIREBASE_API_KEY)
+# - VITE_FIREBASE_AUTH_DOMAIN (or FIREBASE_AUTH_DOMAIN)
+# - VITE_FIREBASE_PROJECT_ID (or FIREBASE_PROJECT_ID)
+# - VITE_FIREBASE_STORAGE_BUCKET (or FIREBASE_STORAGE_BUCKET)
+# - VITE_FIREBASE_MESSAGING_SENDER_ID (or FIREBASE_MESSAGING_SENDER_ID)
+# - VITE_FIREBASE_APP_ID (or FIREBASE_APP_ID)
+# - VITE_FIREBASE_MEASUREMENT_ID (or FIREBASE_MEASUREMENT_ID)

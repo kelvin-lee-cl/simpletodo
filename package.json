@@ -1,0 +1,11 @@
+{
+  "name": "simpletodo",
+  "version": "1.0.0",
+  "description": "Simple Todo List with Firebase",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -103,7 +103,27 @@
     </div>
 
     <!-- Firebase Configuration -->
-    <script src="config.js"></script>
+    <script>
+        // Load Firebase config from environment variables or config.js
+        (function() {
+            // Try to get config from Netlify environment variables first (available at build time)
+            // Otherwise, it will be loaded from config.js
+            if (typeof window.firebaseConfig === 'undefined') {
+                // For Netlify: environment variables are injected at build time
+                // For local: config.js will set window.firebaseConfig
+                window.firebaseConfig = window.firebaseConfig || {
+                    apiKey: "AIzaSyCwo-oly7ZSt5Z_4AbCcuIvq8yqEK31hzw",
+                    authDomain: "simpledolist.firebaseapp.com",
+                    projectId: "simpledolist",
+                    storageBucket: "simpledolist.firebasestorage.app",
+                    messagingSenderId: "487829472007",
+                    appId: "1:487829472007:web:3afd1cae84736f71fe3ba2",
+                    measurementId: "G-C5Q00G5F5E"
+                };
+            }
+        })();
+    </script>
+    <script src="config.js" onerror="console.warn('config.js not found, using default config')"></script>
     
     <!-- Firebase SDK -->
     <script type="module">
@@ -111,15 +131,33 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Wait for config to be loaded
-        if (!window.firebaseConfig) {
-            console.error('Firebase configuration not found! Please ensure config.js exists and contains your Firebase credentials.');
-            throw new Error('Firebase configuration missing');
+        // Wait for config to be loaded (with a small delay to ensure config.js has loaded)
+        function initFirebase() {
+            if (!window.firebaseConfig) {
+                console.error('Firebase configuration not found! Please ensure config.js exists and contains your Firebase credentials.');
+                document.body.innerHTML = '<div style="padding: 20px; text-align: center;"><h2>Configuration Error</h2><p>Firebase configuration not found. Please ensure config.js exists.</p></div>';
+                return;
+            }
+
+            try {
+                // Initialize Firebase with configuration
+                window.firebaseApp = initializeApp(window.firebaseConfig);
+                window.db = getFirestore(window.firebaseApp);
+                console.log('Firebase initialized successfully');
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                document.body.innerHTML = '<div style="padding: 20px; text-align: center;"><h2>Firebase Error</h2><p>Failed to initialize Firebase: ' + error.message + '</p></div>';
+            }
         }
 
-        // Initialize Firebase with configuration from config.js
-        window.firebaseApp = initializeApp(window.firebaseConfig);
-        window.db = getFirestore(window.firebaseApp);
+        // Wait a bit for config.js to load if it exists
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(initFirebase, 100);
+            });
+        } else {
+            setTimeout(initFirebase, 100);
+        }
     </script>
     <script src="script.js"></script>
 </body>
