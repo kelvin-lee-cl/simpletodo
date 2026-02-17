@@ -1261,6 +1261,28 @@ header h1 {
     flex-wrap: wrap;
 }
 
+.coding-subtask-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.btn-copy-prompt {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-copy-prompt:hover {
+    background: #2980b9;
+}
+
 .coding-subtask-id {
     font-size: 0.8rem;
     font-weight: 600;
@@ -1300,7 +1322,6 @@ header h1 {
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    flex-shrink: 0;
 }
 
 .btn-finish-subtask:hover {

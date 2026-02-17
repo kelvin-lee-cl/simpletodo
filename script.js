@@ -1187,7 +1187,10 @@ class TodoApp {
                 <div class="coding-subtask-row ${completed ? 'completed' : ''}" data-task-id="${this.escapeHtml(taskIdStr)}" data-sub-index="${actualIndex}">
                     <div class="coding-subtask-header">
                         <span class="coding-subtask-id">${rowId || `#${actualIndex + 1}`}</span>
-                        <button type="button" class="btn-finish-subtask">${completed ? '✓ Done' : 'Finish'}</button>
+                        <div class="coding-subtask-actions">
+                            <button type="button" class="btn-copy-prompt" title="Copy Cursor prompt">Copy</button>
+                            <button type="button" class="btn-finish-subtask">${completed ? '✓ Done' : 'Finish'}</button>
+                        </div>
                     </div>
                     <div class="coding-subtask-prompt">${prompt || '—'}</div>
                     ${outcome ? `<div class="coding-subtask-meta coding-subtask-outcome"><strong>Expected:</strong> ${outcome}</div>` : ''}
@@ -1344,6 +1347,16 @@ class TodoApp {
         const listEl = document.getElementById('codingChecklistList');
         if (!listEl || this.codingChecklistFinishBound) return;
         this.codingChecklistFinishBound = (e) => {
+            const copyBtn = e.target.closest('.btn-copy-prompt');
+            if (copyBtn) {
+                const row = copyBtn.closest('.coding-subtask-row');
+                if (row) {
+                    const promptEl = row.querySelector('.coding-subtask-prompt');
+                    const text = promptEl ? promptEl.textContent : '';
+                    this.copyPromptToClipboard(text, copyBtn);
+                }
+                return;
+            }
             const btn = e.target.closest('.btn-finish-subtask');
             if (!btn) return;
             const row = btn.closest('.coding-subtask-row');
@@ -1357,10 +1370,41 @@ class TodoApp {
         listEl.addEventListener('click', this.codingChecklistFinishBound);
     }
 
+    async copyPromptToClipboard(text, buttonEl) {
+        if (!text || !text.trim()) {
+            if (buttonEl) buttonEl.textContent = 'Nothing to copy';
+            setTimeout(() => { if (buttonEl) buttonEl.textContent = 'Copy'; }, 1500);
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text.trim());
+            if (buttonEl) {
+                buttonEl.textContent = 'Copied!';
+                setTimeout(() => { buttonEl.textContent = 'Copy'; }, 2000);
+            }
+        } catch (err) {
+            console.warn('Clipboard copy failed:', err);
+            if (buttonEl) {
+                buttonEl.textContent = 'Copy failed';
+                setTimeout(() => { buttonEl.textContent = 'Copy'; }, 2000);
+            }
+        }
+    }
+
     setupCodingChecklistInlineDelegation() {
         const taskList = document.getElementById('taskList');
         if (!taskList || this.codingChecklistInlineFinishBound) return;
         this.codingChecklistInlineFinishBound = (e) => {
+            const copyBtn = e.target.closest('.btn-copy-prompt');
+            if (copyBtn) {
+                const row = copyBtn.closest('.coding-subtask-row');
+                if (row) {
+                    const promptEl = row.querySelector('.coding-subtask-prompt');
+                    const text = promptEl ? promptEl.textContent : '';
+                    this.copyPromptToClipboard(text, copyBtn);
+                }
+                return;
+            }
             const btn = e.target.closest('.btn-finish-subtask');
             if (!btn) return;
             const row = btn.closest('.coding-subtask-row');
